@@ -4,7 +4,7 @@ import "time"
 
 type Track struct {
 	ID        int64      `db:"id" json:"id"`
-	Name      string     `db:"name" json:"name"`
+	Name      string     `db:"name" json:"title"`
 	Artist    string     `db:"artist" json:"artist"`
 	Album     string     `db:"album" json:"album"`
 	Duration  int64      `db:"duration" json:"duration"`

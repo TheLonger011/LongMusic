@@ -9,17 +9,14 @@ import (
 
 func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// 1. получи заголовок Authorization
 		authHeader := r.Header.Get("Authorization")
 
-		// 2. проверь что он не пустой и начинается с "Bearer "
 		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 
 		}
 
-		// 3. вырежи токен из строки "Bearer <token>"
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
 
 		token, err := jwt.Parse(tokenString,

@@ -28,3 +28,9 @@ func (r *UserRepository) GetByEmail(email string) (domain.User, error) {
 	err := r.db.Get(&user, `SELECT * FROM users WHERE email = $1`, email)
 	return user, err
 }
+
+func (r *UserRepository) GetByID(id int64) (domain.User, error) {
+	var user domain.User
+	err := r.db.Get(&user, "SELECT * FROM users WHERE id = $1", id)
+	return user, err
+}
