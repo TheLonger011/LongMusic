@@ -1,0 +1,3 @@
+ALTER TABLE users DROP COLUMN login;
+ALTER TABLE users DROP COLUMN role;
+ALTER TABLE users DROP COLUMN subscription;

@@ -5,7 +5,9 @@ import (
 	"github.com/TheLonger011/LongMusic/internal/service"
 	"github.com/go-chi/chi/v5"
 	"net/http"
+	"os"
 	"strconv"
+	"time"
 )
 
 type TrackHandler struct {
@@ -68,5 +70,86 @@ func (h *TrackHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+}
+
+func (h *TrackHandler) Stream(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	track, err := h.service.GetByID(id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	file, err := os.Open(track.FilePath)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+	defer file.Close()
+
+	w.Header().Set("Content-Type", "audio/mpeg")
+	http.ServeContent(w, r, track.FilePath, time.Time{}, file)
+}
+
+func (h *TrackHandler) GetAll(w http.ResponseWriter, r *http.Request) {
+	tracks, err := h.service.GetAll()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(tracks)
+}
+
+func (h *TrackHandler) Search(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query().Get("q")
+	tracks, err := h.service.Search(q)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(tracks)
+}
+
+func (h *TrackHandler) GetArtists(w http.ResponseWriter, r *http.Request) {
+	tracks, err := h.service.GetArtists()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(tracks)
+
+}
+
+func (h *TrackHandler) GetArtistTracks(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	tracks, err := h.service.GetArtistsTracks(id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	artistName, _ := h.service.GetArtistName(id)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"artist": map[string]string{"name": artistName},
+		"tracks": tracks,
+	})
 
 }

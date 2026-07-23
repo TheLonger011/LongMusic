@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Подтверждение почты</title>
+  <link rel="stylesheet" href="/static/style.css"/>
+  <style>
+    .auth-page{position:relative;overflow:hidden;}
+    #bg-canvas{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;}
+    .auth-page::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 60% 70% at 50% 50%,transparent 20%,rgba(10,10,10,.55) 100%);pointer-events:none;z-index:0;}
+    .auth-wrap{position:relative;z-index:1;}
+    .auth-header h1{font-size:17px;letter-spacing:2.5px;text-transform:uppercase;font-weight:800;}
+    .logo-text-accent{color:var(--accent);}
+    .code-row{display:flex;gap:10px;justify-content:center;margin:24px 0;}
+    .code-digit{width:52px;height:60px;background:var(--bg-input);border:1.5px solid var(--border);border-radius:var(--radius-md);color:var(--text-primary);font-size:24px;font-weight:700;text-align:center;outline:none;caret-color:var(--accent);transition:border-color .15s,box-shadow .15s;font-family:var(--font);}
+    .code-digit:focus{border-color:var(--border-focus);box-shadow:0 0 0 3px var(--accent-glow);}
+    .code-digit.filled{border-color:rgba(179,255,0,.4);color:var(--accent);}
+    .resend-btn{background:none;border:none;cursor:pointer;font-size:13px;color:var(--accent);font-weight:600;font-family:var(--font);padding:0;transition:opacity .15s;}
+    .resend-btn:disabled{color:var(--text-hint);cursor:not-allowed;}
+    .timer{font-size:13px;color:var(--text-secondary);}
+  </style>
+</head>
+<body class="auth-page">
+<canvas id="bg-canvas"></canvas>
+<div class="auth-wrap">
+  <div class="auth-header">
+    <div class="logo-mark" style="margin:0 auto"><svg viewBox="0 0 24 24"><path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/></svg></div>
+    <h1><span class="logo-text-accent">???</span></h1>
+    <p>Проверь почту</p>
+  </div>
+  <div class="card">
+    <p style="text-align:center;font-size:14px;color:var(--text-secondary);margin-bottom:4px">Мы отправили 6-значный код на</p>
+    <p style="text-align:center;font-size:14px;font-weight:700;color:var(--text-primary)" id="emailDisplay">—</p>
+    <div class="code-row" id="codeRow">
+      <input class="code-digit" maxlength="1" inputmode="numeric" pattern="[0-9]" type="text"/>
+      <input class="code-digit" maxlength="1" inputmode="numeric" pattern="[0-9]" type="text"/>
+      <input class="code-digit" maxlength="1" inputmode="numeric" pattern="[0-9]" type="text"/>
+      <input class="code-digit" maxlength="1" inputmode="numeric" pattern="[0-9]" type="text"/>
+      <input class="code-digit" maxlength="1" inputmode="numeric" pattern="[0-9]" type="text"/>
+      <input class="code-digit" maxlength="1" inputmode="numeric" pattern="[0-9]" type="text"/>
+    </div>
+    <span class="field-msg err" id="code-msg" style="text-align:center;display:block"></span>
+    <button class="btn btn-full" id="submitBtn" disabled style="margin-top:8px">
+      <span class="spinner" id="spin"></span>
+      <span id="btn-text">Завершить регистрацию</span>
+    </button>
+    <div style="text-align:center;margin-top:20px">
+      <span class="timer" id="timer">Повторная отправка через <b id="countdown">60</b> с</span>
+      <button class="resend-btn" id="resendBtn" disabled style="display:none">Отправить код снова</button>
+    </div>
+    <div class="divider">или</div>
+    <p style="text-align:center;font-size:13px;color:var(--text-secondary)">
+      <a href="register.html" style="color:var(--text-secondary);text-decoration:none;transition:color .15s" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-secondary)'">← Вернуться к регистрации</a>
+    </p>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+  (function(){const canvas=document.getElementById('bg-canvas');const ctx=canvas.getContext('2d');const NOTE_CHARS=['♪','♫','♩','♬','♭','♮'];const notes=[];function resize(){canvas.width=window.innerWidth;canvas.height=window.innerHeight;}resize();window.addEventListener('resize',resize);function spawnNote(){notes.push({char:NOTE_CHARS[Math.floor(Math.random()*NOTE_CHARS.length)],x:Math.random()*window.innerWidth,y:window.innerHeight+30,size:14+Math.random()*26,speed:0.25+Math.random()*0.55,drift:(Math.random()-0.5)*0.4,rot:(Math.random()-0.5)*0.6,angle:(Math.random()-0.5)*0.5,alpha:0.06+Math.random()*0.1,life:0});}for(let i=0;i<18;i++){spawnNote();notes[notes.length-1].y=Math.random()*window.innerHeight;}const waves=Array.from({length:7},(_,i)=>({yRatio:0.1+i*0.13,amp:10+Math.random()*22,freq:0.006+Math.random()*0.008,speed:0.18+Math.random()*0.35,phase:Math.random()*Math.PI*2,alpha:0.045+Math.random()*0.07,width:0.8+Math.random()*0.4}));let spawnTimer=0;function draw(ts){const W=canvas.width,H=canvas.height,t=ts*0.001;ctx.clearRect(0,0,W,H);waves.forEach(w=>{ctx.beginPath();const baseY=H*w.yRatio;for(let x=0;x<=W;x+=2){const y=baseY+Math.sin(x*w.freq+t*w.speed+w.phase)*w.amp+Math.sin(x*w.freq*2.3+t*w.speed*1.7)*w.amp*0.3;x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}ctx.strokeStyle=`rgba(179,255,0,${w.alpha})`;ctx.lineWidth=w.width;ctx.stroke();});spawnTimer+=0.016;if(spawnTimer>1.8&&notes.length<30){spawnNote();spawnTimer=0;}for(let i=notes.length-1;i>=0;i--){const n=notes[i];n.y-=n.speed;n.x+=n.drift;n.angle+=n.rot*0.008;n.life+=0.016;let a=n.alpha;if(n.life<1.5)a*=n.life/1.5;if(n.y<80)a*=Math.max(0,n.y/80);ctx.save();ctx.translate(n.x,n.y);ctx.rotate(n.angle);ctx.font=`${n.size}px serif`;ctx.fillStyle=`rgba(179,255,0,${a})`;ctx.fillText(n.char,0,0);ctx.restore();if(n.y<-40)notes.splice(i,1);}requestAnimationFrame(draw);}requestAnimationFrame(draw);})();
+
+  const $=id=>document.getElementById(id);
+  const digits=Array.from(document.querySelectorAll('.code-digit'));
+  const params=new URLSearchParams(location.search);
+  const email=params.get('email')||'';
+  if(email)$('emailDisplay').textContent=email;
+
+  function getCode(){return digits.map(d=>d.value).join('');}
+  function checkReady(){const full=getCode().length===6;$('submitBtn').disabled=!full;digits.forEach(d=>d.classList.toggle('filled',d.value!==''));}
+
+  digits.forEach((d,i)=>{
+    d.addEventListener('input',e=>{const v=e.target.value.replace(/\D/g,'');d.value=v?v[v.length-1]:'';if(d.value&&i<5)digits[i+1].focus();checkReady();});
+    d.addEventListener('keydown',e=>{if(e.key==='Backspace'&&!d.value&&i>0)digits[i-1].focus();});
+    d.addEventListener('paste',e=>{e.preventDefault();const text=(e.clipboardData||window.clipboardData).getData('text').replace(/\D/g,'');text.split('').slice(0,6).forEach((ch,j)=>{if(digits[i+j]){digits[i+j].value=ch;digits[i+j].classList.add('filled');}});const next=Math.min(i+text.length,5);digits[next].focus();checkReady();});
+  });
+  digits[0].focus();
+
+  let secs=60;
+  const timerInterval=setInterval(()=>{secs--;$('countdown').textContent=secs;if(secs<=0){clearInterval(timerInterval);$('timer').style.display='none';$('resendBtn').style.display='inline';$('resendBtn').disabled=false;}},1000);
+
+  let toastT;
+  function toast(text,type=''){clearTimeout(toastT);const el=$('toast');el.textContent=text;el.className='toast show '+type;toastT=setTimeout(()=>el.className='toast',3500);}
+
+  $('resendBtn').addEventListener('click',async()=>{
+    $('resendBtn').disabled=true;$('resendBtn').textContent='Отправляем...';
+    try{
+      const res=await fetch('/api/auth/resend-code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});
+      const data=await res.json();
+      toast(res.ok?'Код отправлен повторно':('Ошибка: '+data.error),res.ok?'success':'error');
+    }catch{toast('Ошибка сети','error');}
+    $('resendBtn').textContent='Отправить код снова';$('resendBtn').disabled=false;
+  });
+
+  $('submitBtn').addEventListener('click',async()=>{
+    const code=getCode();if(code.length<6)return;
+    $('submitBtn').disabled=true;$('spin').style.display='block';$('btn-text').textContent='Проверяем...';
+    try{
+      const res=await fetch('/api/auth/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,code})});
+      const data=await res.json();
+      if(!res.ok){digits.forEach(d=>{d.value='';d.classList.remove('filled');});digits[0].focus();$('code-msg').textContent=data.error||'Неверный код';throw new Error(data.error);}
+      $('code-msg').textContent='';
+      localStorage.setItem('token',data.token);
+      localStorage.setItem('user',JSON.stringify(data.user));
+      toast('Аккаунт создан! Добро пожаловать 🎵','success');
+      setTimeout(()=>window.location.href='index.html',1500);
+    }catch(err){toast(err.message,'error');}
+    finally{$('submitBtn').disabled=false;$('spin').style.display='none';$('btn-text').textContent='Завершить регистрацию';}
+  });
+</script>
+</body>
+</html>

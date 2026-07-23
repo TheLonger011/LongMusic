@@ -1,0 +1,1 @@
+ALTER TABLE playlists ADD COLUMN is_public BOOLEAN DEFAULT false;

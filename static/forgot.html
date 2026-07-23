@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Восстановление пароля</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0a0a0a;
+      color: #f0f0f0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #bg-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse 60% 70% at 50% 50%, transparent 20%, rgba(10,10,10,.55) 100%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .auth-wrap {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 420px;
+    }
+
+    .auth-header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .logo-mark {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 42px;
+      height: 42px;
+      background: #b3ff00;
+      border-radius: 10px;
+      margin: 0 auto;
+    }
+
+    .logo-mark svg {
+      width: 22px;
+      height: 22px;
+      fill: #0a1800;
+    }
+
+    .auth-header h1 {
+      font-size: 17px;
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      font-weight: 800;
+      margin-top: 10px;
+    }
+
+    .logo-text-accent {
+      color: #b3ff00;
+    }
+
+    .auth-header p {
+      font-size: 13px;
+      color: #888888;
+      margin-top: 4px;
+    }
+
+    .card {
+      background: #111111;
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 14px;
+      padding: 28px 24px;
+    }
+
+    .field-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #888888;
+      letter-spacing: .5px;
+      text-transform: uppercase;
+      margin-bottom: 7px;
+    }
+
+    .input {
+      width: 100%;
+      height: 48px;
+      padding: 0 14px;
+      background: #161616;
+      border: 1.5px solid rgba(255,255,255,.08);
+      border-radius: 10px;
+      color: #f0f0f0;
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color .15s;
+    }
+
+    .input:focus {
+      border-color: rgba(179,255,0,.6);
+      box-shadow: 0 0 0 3px rgba(179,255,0,.12);
+    }
+
+    .input.error {
+      border-color: #ff4d4d;
+      background: rgba(255,77,77,.08);
+    }
+
+    .input.valid {
+      border-color: rgba(179,255,0,.4);
+    }
+
+    .field-msg {
+      font-size: 12px;
+      margin-top: 5px;
+      min-height: 16px;
+      display: block;
+    }
+
+    .field-msg.err {
+      color: #ff4d4d;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      height: 48px;
+      padding: 0 24px;
+      background: #b3ff00;
+      color: #0a1800;
+      font-size: 14px;
+      font-weight: 700;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background .15s, transform .1s;
+      width: 100%;
+    }
+
+    .btn:hover:not(:disabled) {
+      background: #8acc00;
+    }
+
+    .btn:disabled {
+      background: #222222;
+      color: #555555;
+      cursor: not-allowed;
+    }
+
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid #0a1800;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      display: none;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 12px;
+      color: #555555;
+      margin: 20px 0;
+    }
+
+    .divider::before,
+    .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: rgba(255,255,255,.08);
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: #1a1a1a;
+      border: 1px solid rgba(255,255,255,.08);
+      color: #f0f0f0;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 500;
+      transition: transform .28s cubic-bezier(.34,1.56,.64,1);
+      white-space: nowrap;
+      z-index: 1000;
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .toast.success {
+      border-color: rgba(179,255,0,.4);
+      color: #b3ff00;
+    }
+
+    .toast.error {
+      border-color: rgba(255,77,77,.4);
+      color: #ff4d4d;
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+
+<div class="auth-wrap">
+  <div class="auth-header">
+    <div class="logo-mark">
+      <svg viewBox="0 0 24 24"><path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/></svg>
+    </div>
+    <h1><span class="logo-text-accent">???</span></h1>
+    <p>Восстановление доступа</p>
+  </div>
+
+  <div class="card">
+    <div id="step1">
+      <p style="font-size:14px;color:#888888;margin-bottom:24px;line-height:1.6">
+        Введи почту, привязанную к аккаунту — мы отправим код для сброса пароля.
+      </p>
+      <div style="margin-bottom:18px">
+        <label class="field-label" for="email">Электронная почта</label>
+        <input class="input" type="email" id="email" placeholder="example@mail.ru" autocomplete="email"/>
+        <span class="field-msg" id="email-msg"></span>
+      </div>
+      <button class="btn" id="sendBtn">
+        <span class="spinner" id="spin1"></span>
+        <span id="btn1-text">Отправить код</span>
+      </button>
+    </div>
+
+    <div id="step2" style="display:none">
+      <p style="font-size:14px;color:#888888;margin-bottom:6px;line-height:1.6">Код отправлен на</p>
+      <p style="font-size:14px;font-weight:700;color:#b3ff00;margin-bottom:20px" id="emailShow">—</p>
+
+      <div style="margin-bottom:18px">
+        <label class="field-label" for="code">Код подтверждения</label>
+        <input class="input" type="text" id="code" placeholder="6-значный код" maxlength="6" inputmode="numeric"/>
+        <span class="field-msg" id="code-msg"></span>
+      </div>
+
+      <div style="margin-bottom:18px">
+        <label class="field-label" for="newpass">Новый пароль</label>
+        <div style="position:relative">
+          <input class="input" type="password" id="newpass" placeholder="не менее 8 символов" autocomplete="new-password" style="padding-right:44px"/>
+          <button type="button" id="togglePass" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#555555;padding:0;display:flex" aria-label="Показать пароль">
+            <svg id="eyeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+        </div>
+        <span class="field-msg" id="pass-msg"></span>
+      </div>
+
+      <button class="btn" id="resetBtn">
+        <span class="spinner" id="spin2"></span>
+        <span id="btn2-text">Сменить пароль</span>
+      </button>
+    </div>
+
+    <div class="divider">или</div>
+    <p style="text-align:center;font-size:13px;color:#888888">
+      <a href="login.html" style="color:#888888;text-decoration:none;" onmouseover="this.style.color='#b3ff00'" onmouseout="this.style.color='#888888'">← Вернуться к входу</a>
+    </p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  (function() {
+    const canvas = document.getElementById('bg-canvas');
+    const ctx = canvas.getContext('2d');
+    const NOTE_CHARS = ['♪','♫','♩','♬','♭','♮'];
+    const notes = [];
+    function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+    resize();
+    window.addEventListener('resize', resize);
+    function spawnNote() {
+      notes.push({ char: NOTE_CHARS[Math.floor(Math.random()*NOTE_CHARS.length)], x: Math.random()*window.innerWidth, y: window.innerHeight+30, size: 14+Math.random()*26, speed: 0.25+Math.random()*0.55, drift: (Math.random()-0.5)*0.4, rot: (Math.random()-0.5)*0.6, angle: (Math.random()-0.5)*0.5, alpha: 0.06+Math.random()*0.1, life: 0 });
+    }
+    for(let i=0;i<18;i++){spawnNote();notes[notes.length-1].y=Math.random()*window.innerHeight;}
+    const waves=Array.from({length:7},(_,i)=>({yRatio:0.1+i*0.13,amp:10+Math.random()*22,freq:0.006+Math.random()*0.008,speed:0.18+Math.random()*0.35,phase:Math.random()*Math.PI*2,alpha:0.045+Math.random()*0.07,width:0.8+Math.random()*0.4}));
+    let spawnTimer=0;
+    function draw(ts){
+      const W=canvas.width,H=canvas.height,t=ts*0.001;
+      ctx.clearRect(0,0,W,H);
+      waves.forEach(w=>{ctx.beginPath();const baseY=H*w.yRatio;for(let x=0;x<=W;x+=2){const y=baseY+Math.sin(x*w.freq+t*w.speed+w.phase)*w.amp+Math.sin(x*w.freq*2.3+t*w.speed*1.7)*w.amp*0.3;x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}ctx.strokeStyle=`rgba(179,255,0,${w.alpha})`;ctx.lineWidth=w.width;ctx.stroke();});
+      spawnTimer+=0.016;
+      if(spawnTimer>1.8&&notes.length<30){spawnNote();spawnTimer=0;}
+      for(let i=notes.length-1;i>=0;i--){const n=notes[i];n.y-=n.speed;n.x+=n.drift;n.angle+=n.rot*0.008;n.life+=0.016;let a=n.alpha;if(n.life<1.5)a*=n.life/1.5;if(n.y<80)a*=Math.max(0,n.y/80);ctx.save();ctx.translate(n.x,n.y);ctx.rotate(n.angle);ctx.font=`${n.size}px serif`;ctx.fillStyle=`rgba(179,255,0,${a})`;ctx.fillText(n.char,0,0);ctx.restore();if(n.y<-40)notes.splice(i,1);}
+      requestAnimationFrame(draw);
+    }
+    requestAnimationFrame(draw);
+  })();
+
+  const $ = id => document.getElementById(id);
+  function msg(id,text,type){const el=$(id);el.textContent=text;el.className='field-msg'+(type?' '+type:'');}
+  function setState(inp,s){inp.classList.remove('error','valid');if(s)inp.classList.add(s);}
+  let toastT;
+  function toast(text,type=''){clearTimeout(toastT);const el=$('toast');el.textContent=text;el.className='toast show '+type;toastT=setTimeout(()=>el.className='toast',3500);}
+
+  $('sendBtn').addEventListener('click',async()=>{
+    const email=$('email').value.trim();
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){setState($('email'),'error');msg('email-msg','Введи корректный адрес почты','err');return;}
+    setState($('email'),'valid');msg('email-msg','');
+    $('sendBtn').disabled=true;$('spin1').style.display='block';$('btn1-text').textContent='Отправляем...';
+    try{
+      const res = await fetch('/api/auth/forgot', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({email})
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Ошибка');
+      $('emailShow').textContent=email;
+      $('step1').style.display='none';
+      $('step2').style.display='block';
+      toast('Код отправлен','success');
+    }catch(err){toast(err.message,'error');}
+    finally{$('sendBtn').disabled=false;$('spin1').style.display='none';$('btn1-text').textContent='Отправить код';}
+  });
+
+  $('togglePass').addEventListener('click',()=>{
+    const p=$('newpass');const show=p.type==='password';p.type=show?'text':'password';
+    $('eyeIcon').innerHTML=show?'<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><line x1="1" y1="1" x2="23" y2="23"/>':'<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+  });
+
+  $('resetBtn').addEventListener('click',async()=>{
+    const email = $('emailShow').textContent;
+    const code=$('code').value.trim();const pass=$('newpass').value;
+    let ok=true;
+    if(code.length!==6||isNaN(code)){setState($('code'),'error');msg('code-msg','Введи 6-значный код','err');ok=false;}else{setState($('code'),'valid');msg('code-msg','');}
+    if(pass.length<8){setState($('newpass'),'error');msg('pass-msg','Минимум 8 символов','err');ok=false;}else{setState($('newpass'),'valid');msg('pass-msg','');}
+    if(!ok)return;
+    $('resetBtn').disabled=true;$('spin2').style.display='block';$('btn2-text').textContent='Сохраняем...';
+    try{
+      const res = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({email, code, password: pass})
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Ошибка');
+      toast('Пароль успешно изменён','success');
+      setTimeout(()=>window.location.href='login.html',1500);
+    }catch(err){toast(err.message,'error');}
+    finally{$('resetBtn').disabled=false;$('spin2').style.display='none';$('btn2-text').textContent='Сменить пароль';}
+  });
+</script>
+</body>
+</html>
